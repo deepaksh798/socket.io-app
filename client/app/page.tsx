@@ -7,9 +7,9 @@ import { connectWebSocket } from "@/utils/ws";
 export default function Home() {
   const socket = useRef<any>(null);
   const [userName, setUserName] = useState("");
-  const [message, setMessage] = useState("");
+  const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<
-    Array<{ sender: string; text: string; time: string }>
+    Array<{ id: string; sender: string; text: string; time: string }>
   >([]);
   const [isConnected, setIsConnected] = useState(true);
   const [showNamePopup, setShowNamePopup] = useState(true);
@@ -17,17 +17,30 @@ export default function Home() {
 
   useEffect(() => {
     socket.current = connectWebSocket();
+
+    socket.current.on("connect", () => {
+      socket.current.on("roomNotice", (userName: string) => {
+        console.log(`${userName} has joined the group.`);
+      });
+
+      socket.current.on("chatMessage", (message: string) => {
+        // const { sender, text, time } = messageData;
+        console.log("Received message:", message);
+        setMessages((prev: any) => [...prev, message]);
+      });
+    });
   }, []);
 
   const handleNameSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (userName.trim()) {
       setShowNamePopup(false);
+      socket.current.emit("joinRoom", userName.trim());
     }
   };
 
   const sendMessage = () => {
-    if (!message.trim()) return;
+    if (!inputValue.trim()) return;
 
     const currentTime = new Date().toLocaleTimeString("en-US", {
       hour: "2-digit",
@@ -38,12 +51,20 @@ export default function Home() {
     setMessages((prev) => [
       ...prev,
       {
+        id: Date.now().toString(),
+        text: inputValue.trim(),
         sender: userName,
-        text: message.trim(),
         time: currentTime,
       },
     ]);
-    setMessage("");
+
+    socket.current.emit("chatMessage", {
+      id: Date.now().toString(),
+      text: inputValue.trim(),
+      sender: userName,
+      time: currentTime,
+    });
+    setInputValue("");
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -144,7 +165,7 @@ export default function Home() {
                           {msg.sender}
                         </p>
                       )}
-                      <p className="text-sm break-words">{msg.text}</p>
+                      <p className="text-sm wrap-break-words">{msg.text}</p>
                       <p
                         className={`text-xs mt-1 text-right ${
                           isOwnMessage ? "text-teal-100" : "text-gray-500"
@@ -165,8 +186,8 @@ export default function Home() {
               <input
                 className="flex-1 bg-white border border-gray-300 rounded-full px-5 py-3 focus:outline-none focus:border-teal-500 transition-colors"
                 type="text"
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
+                value={inputValue}
+                onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder={
                   isConnected ? "Type a message..." : "Connecting..."
@@ -175,7 +196,7 @@ export default function Home() {
               />
               <button
                 onClick={sendMessage}
-                disabled={!isConnected || !message.trim()}
+                disabled={!isConnected || !inputValue.trim()}
                 className="bg-teal-500 text-white p-3 rounded-full hover:bg-teal-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl"
               >
                 <Send className="w-5 h-5" />

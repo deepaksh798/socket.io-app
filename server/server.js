@@ -12,8 +12,20 @@ const io = new Server(server, {
   },
 });
 
+const ROOM = "group";
 io.on("connection", (socket) => {
   console.log("New client connected:", socket.id);
+
+  socket.on("joinRoom", async (username) => {
+    console.log(`${username} joined the group.`);
+    await socket.join(ROOM);
+    //brodcasting
+    socket.to(ROOM).emit("roomNotice", username);
+  });
+
+  socket.on("chatMessage", (msg) => {
+    socket.to(ROOM).emit("chatMessage", msg);
+  });
 });
 
 app.get("/", (req, res) => {
