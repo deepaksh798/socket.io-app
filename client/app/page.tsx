@@ -5,15 +5,29 @@ import { Send, Users } from "lucide-react";
 import { connectWebSocket } from "@/utils/ws";
 
 export default function Home() {
+  const timer = useRef<any>(null);
   const socket = useRef<any>(null);
   const [userName, setUserName] = useState("");
   const [inputValue, setInputValue] = useState("");
   const [messages, setMessages] = useState<
     Array<{ id: string; sender: string; text: string; time: string }>
   >([]);
-  const [isConnected, setIsConnected] = useState(true);
   const [showNamePopup, setShowNamePopup] = useState(true);
-  const [isTyping] = useState(false);
+  const [typers, setTypers] = useState<any[]>([]);
+
+  // typing indicator
+  useEffect(() => {
+    if (inputValue) {
+      socket.current.emit("typing", userName);
+      clearTimeout(timer.current);
+    }
+
+    timer.current = setTimeout(() => {
+      socket.current.emit("stopTyping", userName);
+    }, 1000);
+
+    return () => clearTimeout(timer.current);
+  }, [inputValue, userName]);
 
   useEffect(() => {
     socket.current = connectWebSocket();
@@ -28,7 +42,29 @@ export default function Home() {
         console.log("Received message:", message);
         setMessages((prev: any) => [...prev, message]);
       });
+
+      socket.current.on("typing", (username: any) => {
+        setTypers((prev) => {
+          const isExist = prev.find((typer: any) => typer === username);
+          if (!isExist) {
+            return [...prev, username];
+          }
+          return prev;
+        });
+      });
+
+      socket.current.on("stopTyping", (username: any) => {
+        setTypers((prev) => prev.filter((typer) => typer !== username));
+      });
     });
+
+    return () => {
+      socket.current.off("roomNotice");
+      socket.current.off("chatMessage");
+      socket.current.off("typing");
+      socket.current.off("stopTyping");
+      socket.current.disconnect();
+    };
   }, []);
 
   const handleNameSubmit = (e: React.FormEvent) => {
@@ -77,7 +113,7 @@ export default function Home() {
   return (
     <div className="h-screen w-screen overflow-hidden bg-gray-100">
       {showNamePopup ? (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-teal-500 to-teal-600">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-linear-to-br from-teal-500 to-teal-600">
           <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md">
             <div className="flex justify-center mb-6">
               <div className="bg-teal-500 rounded-full p-4">
@@ -117,10 +153,12 @@ export default function Home() {
                 <h1 className="font-semibold text-lg">Dev Team Chat</h1>
                 <p
                   className={`text-xs text-teal-100 ${
-                    isTyping ? "italic" : ""
+                    typers.length > 0 ? "italic" : ""
                   }`}
                 >
-                  {isTyping ? "Someone is typing..." : `${userName} (You)`}
+                  {typers.length > 0
+                    ? `${typers.join(", ")} is typing...`
+                    : `${userName} (You)`}
                 </p>
               </div>
             </div>
@@ -189,14 +227,11 @@ export default function Home() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                placeholder={
-                  isConnected ? "Type a message..." : "Connecting..."
-                }
-                disabled={!isConnected}
+                placeholder="Type a message..."
               />
               <button
                 onClick={sendMessage}
-                disabled={!isConnected || !inputValue.trim()}
+                disabled={!inputValue.trim()}
                 className="bg-teal-500 text-white p-3 rounded-full hover:bg-teal-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors shadow-lg hover:shadow-xl"
               >
                 <Send className="w-5 h-5" />
