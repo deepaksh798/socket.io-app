@@ -15,6 +15,9 @@ export default function Home() {
   const [showNamePopup, setShowNamePopup] = useState(true);
   const [typers, setTypers] = useState<any[]>([]);
 
+  // NEW: ref for auto-scrolling to bottom
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
   // typing indicator
   useEffect(() => {
     if (inputValue) {
@@ -28,6 +31,13 @@ export default function Home() {
 
     return () => clearTimeout(timer.current);
   }, [inputValue, userName]);
+
+  // NEW: auto-scroll to bottom whenever messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth", block: "end" });
+    }
+  }, [messages]);
 
   useEffect(() => {
     socket.current = connectWebSocket();
@@ -216,6 +226,8 @@ export default function Home() {
                 );
               })
             )}
+            {/* NEW: sentinel element to scroll into view */}
+            <div ref={messagesEndRef} />
           </div>
 
           {/* Input Area */}
