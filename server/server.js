@@ -2,12 +2,15 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
+dotenv.config();
 const app = express();
 const server = http.createServer(app); // Use same server for Express + Socket.IO
 
+const port = process.env.PORT;
+
 const io = new Server(server, {
   cors: {
-    origin: "http://localhost:3000",
+    origin: "https://socket-io-app.pages.dev/",
     methods: ["GET", "POST"],
   },
 });
@@ -40,6 +43,6 @@ app.get("/", (req, res) => {
   res.send("Hello World!");
 });
 
-server.listen(4000, () => {
-  console.log("Server (Express + Socket.IO) running on port 4000");
+server.listen(port, () => {
+  console.log("Server (Express + Socket.IO) running");
 });
