@@ -1,18 +1,30 @@
 const express = require("express");
 const http = require("http");
 const dotenv = require("dotenv");
+const cors = require("cors");
 const { Server } = require("socket.io");
 
 dotenv.config();
 const app = express();
-const server = http.createServer(app); // Use same server for Express + Socket.IO
+const server = http.createServer(app);
 
-const port = process.env.PORT;
+const port = process.env.PORT || 3000;
+
+// CORS middleware for Express
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || "https://socket-io-app.pages.dev",
+    methods: ["GET", "POST"],
+    credentials: true,
+  })
+);
 
 const io = new Server(server, {
   cors: {
-    origin: "https://socket-io-app.pages.dev/",
+    origin: process.env.FRONTEND_URL || "https://socket-io-app.pages.dev",
     methods: ["GET", "POST"],
+    allowedHeaders: ["Content-Type"],
+    credentials: true,
   },
 });
 
@@ -23,7 +35,7 @@ io.on("connection", (socket) => {
   socket.on("joinRoom", async (username) => {
     console.log(`${username} joined the group.`);
     await socket.join(ROOM);
-    //brodcasting
+    // broadcasting
     socket.to(ROOM).emit("roomNotice", username);
   });
 
