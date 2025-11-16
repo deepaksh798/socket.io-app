@@ -15,6 +15,7 @@ const BackendStatus: React.FC<Props> = ({ children }) => {
 
   useEffect(() => {
     const timer = setInterval(() => setTime((t) => t + 1), 1000);
+    let attemptCount = 0;
 
     const checkBackend = async () => {
       try {
@@ -25,11 +26,6 @@ const BackendStatus: React.FC<Props> = ({ children }) => {
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/health`,
           {
             signal: controller.signal,
-            headers: {
-              "Cache-Control": "no-cache, no-store, must-revalidate",
-              Pragma: "no-cache",
-              Expires: "0",
-            },
           }
         );
 
@@ -40,8 +36,17 @@ const BackendStatus: React.FC<Props> = ({ children }) => {
           clearInterval(timer);
         }
       } catch (err) {
-        setStatus("error");
-        clearInterval(timer);
+        attemptCount++;
+        if (attemptCount === 1) {
+          setStatus("waking");
+          // Retry after 2 seconds
+          setTimeout(checkBackend, 2000);
+        } else if (attemptCount > 15) {
+          setStatus("error");
+          clearInterval(timer);
+        } else {
+          setTimeout(checkBackend, 2000);
+        }
       }
     };
 
