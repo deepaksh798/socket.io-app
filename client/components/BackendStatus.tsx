@@ -20,7 +20,7 @@ const BackendStatus: React.FC<Props> = ({ children }) => {
     const checkBackend = async () => {
       try {
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000);
+        const timeout = setTimeout(() => controller.abort(), 90000);
 
         const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}/health`,
@@ -123,8 +123,8 @@ const BackendStatus: React.FC<Props> = ({ children }) => {
 
                 {/* Helpful Tips */}
                 <div className="mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100">
-                  <p className="text-xs text-indigo-700">
-                    <span className="font-semibold">💡 Tip:</span> Render's free
+                  <p className="text-xs text-yellow-700">
+                    <span className="font-semibold">Info:</span> Render's free
                     tier spins down after 15 minutes of inactivity. First
                     request after sleep takes longer.
                   </p>
